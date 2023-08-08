@@ -7,20 +7,20 @@ import download from 'download-git-repo'
 import { program } from 'commander'
 import fs from 'fs-extra'
 import { Font } from 'fonteditor-core'
+import { DownloaderHelper } from 'node-downloader-helper'
 
 program.version('1.0.0', '-v, --version')
 
 program.command('create', { isDefault: true }).action(async () => {
-  const { name, fontPath, inline, url, fontFamily, prefix, targetPath } = await inquirer.prompt([
+  const { name, inline, url, fontFamily, prefix, targetPath } = await inquirer.prompt([
     {
       name: 'name',
       message: '组件名称',
       default: 'CustomIcon',
     },
     {
-      name: 'fontPath',
+      name: 'url',
       message: '字体文件路径(本地或网络路径)',
-      default: './iconfont.ttf',
     },
     {
       name: 'inline',
@@ -29,18 +29,14 @@ program.command('create', { isDefault: true }).action(async () => {
       default: false,
     },
     {
-      name: 'url',
-      message: 'iconfont字体文件CDN地址',
-    },
-    {
       name: 'fontFamily',
       message: '字体名称',
-      default: 'customIconfont',
+      default: 'iconfont',
     },
     {
       name: 'prefix',
       message: '图标名称前缀',
-      default: 'custom-icon',
+      default: 'icon-',
     },
     {
       name: 'targetPath',
@@ -49,19 +45,24 @@ program.command('create', { isDefault: true }).action(async () => {
     },
   ])
 
-  let file
+  // 如果是网络地址
+  if (/^(http|https)?(\:)?\/\/.*?$/i.test(url)) {
+    const dl = new DownloaderHelper(url)
+    dl.on('end', (res) => {
+      console.log(res)
+    })
+    dl.start()
+  }
 
   try {
-    const fontExists = await fs.pathExists(fontPath)
+    const fontExists = await fs.pathExists(url)
     if (!fontExists) {
-      console.log(chalk.red(`字体文件"${fontPath}"不存在`))
+      console.log(chalk.red(`字体文件"${url}"不存在`))
       return
     }
-    file = await fs.readFile(fontPath)
+    const fontBuffer = await fs.readFile(url)
     // 将 TTF 文件解析为字体对象
-    const font = Font.create(file, {
-      type: 'ttf',
-    })
+    const font = Font.create(fontBuffer, { type: 'ttf' })
     // 打印每个图标的名称和编码
     font.data.glyf.forEach((glyph, index) => {
       if (glyph.name) {
@@ -69,11 +70,11 @@ program.command('create', { isDefault: true }).action(async () => {
       }
     })
   } catch (error) {
-    console.log(chalk.red(`读取文件"${fontPath}"失败：${error}`))
+    console.log(chalk.red(`读取文件"${url}"失败：${error}`))
   }
 
-  const ext = path.extname(fontPath)
-  const base64 = `data:application/font-${ext};charset=utf-8;base64,` + Buffer.from(file).toString('base64')
+  const ext = path.extname(url)
+  const base64 = `data:application/font-${ext};charset=utf-8;base64,` + Buffer.from(fontBuffer).toString('base64')
 })
 
 program.parse()

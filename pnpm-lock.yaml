@@ -23,6 +23,9 @@ dependencies:
   inquirer:
     specifier: ^9.2.10
     version: 9.2.10
+  node-downloader-helper:
+    specifier: ^2.1.9
+    version: 2.1.9
   ora:
     specifier: ^7.0.1
     version: 7.0.1
@@ -2300,6 +2303,12 @@ packages:
   /mute-stream@1.0.0:
     resolution: {integrity: sha512-avsJQhyd+680gKXyG/sQc0nXaC6rBkPOfyHYcFb9+hdkqQkR9bdnkJ0AMZhke0oesPqIO+mFFJ+IdBc7mst4IA==}
     engines: {node: ^14.17.0 || ^16.13.0 || >=18.0.0}
+    dev: false
+
+  /node-downloader-helper@2.1.9:
+    resolution: {integrity: sha512-FSvAol2Z8UP191sZtsUZwHIN0eGoGue3uEXGdWIH5228e9KH1YHXT7fN8Oa33UGf+FbqGTQg3sJfrRGzmVCaJA==}
+    engines: {node: '>=14.18'}
+    hasBin: true
     dev: false
 
   /node-releases@2.0.13:
