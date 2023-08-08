@@ -1,0 +1,35 @@
+{
+  "name": "uview-custom-icon",
+  "version": "1.0.0",
+  "description": "根据uview u-icon组件生成新的自定义图标组件",
+  "keywords": [
+    "uniapp",
+    "icon",
+    "nvue",
+    "vue"
+  ],
+  "license": "ISC",
+  "author": "xavi",
+  "main": "index.js",
+  "type": "module",
+  "bin": {
+    "uicon": "./bin/index.js"
+  },
+  "scripts": {
+    "build": "babel src -d dist"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "commander": "^11.0.0",
+    "download-git-repo": "^3.0.2",
+    "fonteditor-core": "^2.1.11",
+    "fs-extra": "^11.1.1",
+    "inquirer": "^9.2.10",
+    "ora": "^7.0.1"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.22.10",
+    "@babel/core": "^7.22.10",
+    "@babel/preset-env": "^7.22.10"
+  }
+}
