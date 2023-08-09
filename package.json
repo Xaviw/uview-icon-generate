@@ -11,7 +11,11 @@
   ],
   "repository": "https://github.com/Xaviw/uview-icon-generate",
   "license": "MIT",
-  "author": "xavi",
+  "author": {
+    "name": "xavi",
+    "email": "xaviw@foxmail.com",
+    "url": "https://xaviw.github.io/XaviDocs/"
+  },
   "type": "module",
   "bin": "./bin/index.js",
   "scripts": {},
