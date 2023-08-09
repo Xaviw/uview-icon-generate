@@ -1,5 +1,5 @@
 {
-  "name": "@xavi/uicon",
+  "name": "@xaviw/uicon",
   "version": "1.0.0",
   "description": "根据uview u-icon组件生成新的自定义图标组件",
   "keywords": [
