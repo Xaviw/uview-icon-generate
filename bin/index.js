@@ -26,7 +26,7 @@ program.command('create', { isDefault: true }).action(async () => {
     },
     {
       name: 'inline',
-      message: '是否以Base64格式内嵌(默认N)',
+      message: '是否以Base64格式内嵌',
       type: 'confirm',
       default: false,
     },
@@ -43,7 +43,8 @@ program.command('create', { isDefault: true }).action(async () => {
       return
     }
   } catch (error) {
-    return error
+    console.log('error: ', error)
+    return
   }
 
   // 读取字体文件
@@ -57,27 +58,31 @@ program.command('create', { isDefault: true }).action(async () => {
     fontFamily = fontData.fontFamily
     chartMap = fontData.chartMap
   } catch (error) {
+    console.log('error: ', error)
     spinner.fail('字体读取失败')
     return
   }
   spinner.succeed('字体解析成功')
 
   // 保存组件代码
+  const name = path.parse(targetPath).name
+  const vuePath = path.join(targetPath, `./${name}.vue`)
   try {
-    spinner.text = `开始保存${targetPath}`
+    spinner.text = `开始保存${vuePath}`
     spinner.start()
-    const name = path.parse(targetPath).name
     let vueCode = await getUIconSourceCode('u-icon.vue')
+    console.log(vueCode);
     vueCode = transformUIcon({ source: vueCode, inline, fontBuffer, fontFamily, fontUrl: url, name })
-    await fs.outputFile(targetPath, vueCode)
-    spinner.succeed(`${targetPath}保存成功`)
+    await fs.outputFile(vuePath, vueCode)
+    spinner.succeed(`${vuePath}保存成功`)
   } catch (error) {
-    spinner.fail(`${targetPath}保存失败`)
+    console.log('error: ', error)
+    spinner.fail(`${vuePath}保存失败`)
     return
   }
 
   // 保存props.js
-  const propsPath = path.join(targetPath, '../props.js')
+  const propsPath = path.join(targetPath, './props.js')
   try {
     spinner.text = `开始保存${propsPath}`
     spinner.start()
@@ -85,12 +90,13 @@ program.command('create', { isDefault: true }).action(async () => {
     await fs.outputFile(propsPath, propsCode)
     spinner.succeed(`${propsPath}保存成功`)
   } catch (error) {
+    console.log('error: ', error)
     spinner.fail(`${propsPath}保存失败`)
     return
   }
 
   // 保存icons.js
-  const iconsPath = path.join(targetPath, '../icons.js')
+  const iconsPath = path.join(targetPath, './icons.js')
   try {
     spinner.text = `开始保存${iconsPath}`
     spinner.start()
@@ -98,6 +104,7 @@ program.command('create', { isDefault: true }).action(async () => {
     await fs.outputFile(iconsPath, iconsCode)
     spinner.succeed(`${iconsPath}保存成功`)
   } catch (error) {
+    console.log('error: ', error)
     spinner.fail(`${iconsPath}保存失败`)
     return
   }
@@ -125,7 +132,7 @@ async function parseUrl(originUrl) {
     .extname(originUrl)
     ?.match(/^\.(.*?)(?:\?.*?)?$/)?.[1]
     ?.toLowerCase()
-  let url = originUrl
+  let url = path.normalize(originUrl)
 
   // 是网络路径
   if (/^(http|https)?(\:)?\/\/.*?$/i.test(originUrl)) {
@@ -137,7 +144,7 @@ async function parseUrl(originUrl) {
   } else {
     // 非网络路径，直接判断本地是否存在
     try {
-      await fileExists(originUrl)
+      await fileExists(url)
     } catch (error) {
       throw error
     }
@@ -160,7 +167,7 @@ function parseTTF(buffer) {
   try {
     const chartMap = {}
     const font = Font.create(buffer, { type: 'ttf' })
-    fontFamily = font.data.name.fontFamily
+    const fontFamily = font.data.name.fontFamily
     // 存储图标名称和编码
     font.data.glyf.forEach((glyph) => {
       if (glyph.name && glyph.unicode) {
@@ -175,8 +182,8 @@ function parseTTF(buffer) {
 
 // 获取u-icon文件源码（u-icon.vue或props.js）
 async function getUIconSourceCode(fileName) {
-  const uniPath = './uni_modules/uview-ui/components/u-icon/' + fileName
-  const nodePath = './node_modules/uview-ui/components/u-icon/' + fileName
+  const uniPath = path.join('./uni_modules/uview-ui/components/u-icon/', fileName)
+  const nodePath = path.join('./node_modules/uview-ui/components/u-icon/', fileName)
   const networkPath = 'https://raw.githubusercontent.com/umicro/uView2.0/master/uni_modules/uview-ui/components/u-icon/' + fileName
   let url
 
@@ -185,11 +192,13 @@ async function getUIconSourceCode(fileName) {
     .then(() => {
       url = uniPath
     })
-    .catch(() => {
-      return fileExists(nodePath).then(() => {
-        url = nodePath
-      })
-    })
+    .catch(() =>
+      fileExists(nodePath)
+        .then(() => {
+          url = nodePath
+        })
+        .catch(() => {})
+    )
 
   if (url) {
     return fs.readFile(url, 'utf-8')
