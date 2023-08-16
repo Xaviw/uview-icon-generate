@@ -1,7 +1,7 @@
 {
   "name": "@xaviw/uicon",
   "version": "1.1.0",
-  "description": "传入iconfont字体图标链接，根据uview u-icon组件生成新的自定义图标组件",
+  "description": "适用于uniapp+uview项目，通过iconfont字体图标自动生成与u-icon一致的图标组件",
   "keywords": [
     "uniapp",
     "uview",
@@ -18,9 +18,7 @@
     "url": "https://xaviw.github.io/XaviDocs/"
   },
   "type": "module",
-  "bin": {
-    "uicon": "./bin/index.js"
-  },
+  "bin": "./bin/index.js",
   "scripts": {},
   "dependencies": {
     "chalk": "^5.3.0",

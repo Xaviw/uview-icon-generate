@@ -11,13 +11,13 @@ import ora from 'ora'
 
 const spinner = ora()
 
-program.version('1.0.0', '-v, --version')
+program.version('1.1.0', '-v, --version')
 
 program.command('create', { isDefault: true }).action(async () => {
   const { targetPath, fontUrl, inline } = await inquirer.prompt([
     {
       name: 'targetPath',
-      message: '组件创建路径以及组件名',
+      message: '组件创建路径',
       default: './components/CustomIcon',
     },
     {
@@ -43,7 +43,7 @@ program.command('create', { isDefault: true }).action(async () => {
       return
     }
   } catch (error) {
-    console.log('error: ', error)
+    console.log(error)
     return
   }
 
@@ -58,7 +58,7 @@ program.command('create', { isDefault: true }).action(async () => {
     fontFamily = fontData.fontFamily
     chartMap = fontData.chartMap
   } catch (error) {
-    console.log('error: ', error)
+    console.log(error)
     spinner.fail('字体读取失败')
     return
   }
@@ -70,13 +70,12 @@ program.command('create', { isDefault: true }).action(async () => {
   try {
     spinner.text = `开始保存${vuePath}`
     spinner.start()
-    let vueCode = await getUIconSourceCode('u-icon.vue')
-    console.log(vueCode);
-    vueCode = transformUIcon({ source: vueCode, inline, fontBuffer, fontFamily, fontUrl: url, name })
+    let { code: vueCode, fromUniModule } = await getSourceCode('u-icon.vue')
+    vueCode = transformVueCode({ source: vueCode, inline, fontBuffer, fontFamily, fontUrl: url, name, fromUniModule })
     await fs.outputFile(vuePath, vueCode)
     spinner.succeed(`${vuePath}保存成功`)
   } catch (error) {
-    console.log('error: ', error)
+    console.log(error)
     spinner.fail(`${vuePath}保存失败`)
     return
   }
@@ -86,11 +85,11 @@ program.command('create', { isDefault: true }).action(async () => {
   try {
     spinner.text = `开始保存${propsPath}`
     spinner.start()
-    const propsCode = await getUIconSourceCode('props.js')
+    const { code: propsCode } = await getSourceCode('props.js')
     await fs.outputFile(propsPath, propsCode)
     spinner.succeed(`${propsPath}保存成功`)
   } catch (error) {
-    console.log('error: ', error)
+    console.log(error)
     spinner.fail(`${propsPath}保存失败`)
     return
   }
@@ -100,11 +99,11 @@ program.command('create', { isDefault: true }).action(async () => {
   try {
     spinner.text = `开始保存${iconsPath}`
     spinner.start()
-    const iconsCode = transformIcons(chartMap)
+    const iconsCode = getIconsCode(chartMap)
     await fs.outputFile(iconsPath, iconsCode)
     spinner.succeed(`${iconsPath}保存成功`)
   } catch (error) {
-    console.log('error: ', error)
+    console.log(error)
     spinner.fail(`${iconsPath}保存失败`)
     return
   }
@@ -113,7 +112,7 @@ program.command('create', { isDefault: true }).action(async () => {
 program.parse()
 
 // 检查文件是否存在
-function fileExists(path) {
+function checkFileExists(path) {
   return new Promise((resolve, reject) => {
     fs.pathExists(path)
       .then((flag) => {
@@ -144,7 +143,7 @@ async function parseUrl(originUrl) {
   } else {
     // 非网络路径，直接判断本地是否存在
     try {
-      await fileExists(url)
+      await checkFileExists(url)
     } catch (error) {
       throw error
     }
@@ -181,41 +180,45 @@ function parseTTF(buffer) {
 }
 
 // 获取u-icon文件源码（u-icon.vue或props.js）
-async function getUIconSourceCode(fileName) {
+async function getSourceCode(fileName) {
   const uniPath = path.join('./uni_modules/uview-ui/components/u-icon/', fileName)
   const nodePath = path.join('./node_modules/uview-ui/components/u-icon/', fileName)
-  const networkPath = 'https://raw.githubusercontent.com/umicro/uView2.0/master/uni_modules/uview-ui/components/u-icon/' + fileName
-  let url
+  const networkPath = 'https://gitee.com/umicro/uView2.0/raw/master/uni_modules/uview-ui/components/u-icon/' + fileName
+  let url,
+    fromUniModule = true
 
   // 判断本地源码文件是否存在
-  await fileExists(uniPath)
+  await checkFileExists(uniPath)
     .then(() => {
       url = uniPath
     })
     .catch(() =>
-      fileExists(nodePath)
+      checkFileExists(nodePath)
         .then(() => {
           url = nodePath
+          fromUniModule = false
         })
         .catch(() => {})
     )
 
   if (url) {
-    return fs.readFile(url, 'utf-8')
+    return fs.readFile(url, 'utf-8').then((code) => ({ code, fromUniModule }))
   } else {
-    return fetch(networkPath).then((res) => res.text())
+    return fetch(networkPath)
+      .then((res) => res.text())
+      .then((code) => ({ code, fromUniModule }))
   }
 }
 
 // 处理u-icon.vue文件
-function transformUIcon({ source, inline, fontFamily, name, fontBuffer, fontUrl }) {
+function transformVueCode({ source, inline, fontFamily, name, fontBuffer, fontUrl, fromUniModule = true }) {
   // 通用修改部分
   source = source.replace(/['"]fontFamily['"]:\s*['"]uicon-iconfont['"]/i, `'fontFamily': '${fontFamily}'`)
   source = source.replace(/font-family:\s*['"]uicon-iconfont['"]/i, `font-family: '${fontFamily}'`)
   source = source.replace(/font-family:\s*uicon-iconfont/i, `font-family: ${fontFamily}`)
   source = source.replace(/name: ['"]u-icon['"]/i, `name: '${name}'`)
   source = source.replace(/return icons\[['"]uicon-['"]\s*\+\s*this.name\]/i, `return icons[this.name]`)
-  source = source.replace(/\@import\s*.*?;/i, `@import "@/uni_modules/uview-ui/libs/css/components.scss";`)
+  source = source.replace(/\@import\s*.*?;/i, fromUniModule ? `@import "@/uni_modules/uview-ui/libs/css/components.scss";` : `@import "uview-ui/libs/css/components.scss";`)
   // 字体引入部分
   if (inline) {
     const base64 = `data:application/font-ttf;charset=utf-8;base64,` + Buffer.from(fontBuffer).toString('base64')
@@ -229,6 +232,6 @@ function transformUIcon({ source, inline, fontFamily, name, fontBuffer, fontUrl 
 }
 
 // 处理props.js文件
-function transformIcons(chartMap) {
+function getIconsCode(chartMap) {
   return `export default ${JSON.stringify(chartMap)}`.replace(/\\\\/g, '\\')
 }
